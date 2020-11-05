@@ -1,0 +1,23 @@
+{
+  "name": "depth-of-field",
+  "version": "1.0.0",
+  "description": "Depth of field project for Computer Graphics exam",
+  "main": "index.html",
+  "dependencies": {
+    "three": "^0.121.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pol52/depth-of-field.git"
+  },
+  "author": "Paolo Innocenti",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Pol52/depth-of-field/issues"
+  },
+  "homepage": "https://github.com/Pol52/depth-of-field#readme"
+}
