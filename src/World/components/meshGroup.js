@@ -70,4 +70,17 @@ function createCube() {
     return cube;   
 }
 
-export { createCube, createMeshGroup };
+function scatterBalls(group){
+    for(let item of group.children){
+        if(item.geometry.type == "SphereBufferGeometry"){
+            let x = Math.random() * 8;
+            x *= Math.round(Math.random()) ? 1 : -1;
+            let y = Math.random() * 8;
+            y *= Math.round(Math.random()) ? 1 : -1;
+            item.position.set(x,y,item.position.z);
+        }
+        
+    }
+}
+
+export { createCube, createMeshGroup, scatterBalls };
