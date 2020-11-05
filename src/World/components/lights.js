@@ -8,7 +8,7 @@ function createLights() {
     mainLight.position.set(0,12,0);
     mainLight.castShadow = true    
 
-    const ambientLight = new HemisphereLight('white', 'darkslategrey', 1);
+    const ambientLight = new HemisphereLight('white', 'darkslategrey', 1.5);
 
     return {mainLight, ambientLight};
 }
