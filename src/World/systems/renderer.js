@@ -1,58 +1,111 @@
-import { WebGLRenderer } from '../../../node_modules/three/build/three.module.js';
-import { Raycaster, Vector2 } from '../../../node_modules/three/build/three.module.js';
+import { LinearFilter, 
+        Mesh, 
+        OrthographicCamera, 
+        PlaneBufferGeometry,
+        Raycaster, 
+        RGBFormat,
+        Scene,
+        ShaderMaterial,
+        UniformsUtils,
+        WebGLRenderer,
+        WebGLRenderTarget } from '../../../node_modules/three/build/three.module.js';
 
-import { EffectComposer } from '../../../node_modules/three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from '../../../node_modules/three/examples/jsm/postprocessing/RenderPass.js';
-import { BokehPass } from '../../../node_modules/three/examples/jsm/postprocessing/BokehPass.js';
+import { BokehShader } from '../../../node_modules/three/examples/jsm/shaders/BokehShader2.js';
 
 let raycaster = new Raycaster();
+let distance = 100;
+const shaderSettings = {
+    rings: 3,
+    samples: 4
+};
 
 function createRenderer() {
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.physicallyCorrectLights = true;
-
     
-
     return renderer;
 }
 
-function createPostProcessing(scene, camera, renderer, width, height) {
-    const postprocessing = {};
+function createPostProcessing(width, height){
 
-    const renderPass = new RenderPass( scene, camera );
+    const postprocessing = { enabled: false };
 
-    const bokehPass = new BokehPass( scene, camera, {
-        focus: 1.0,
-        aperture: 0.025,
-        maxblur: 0.01,
+    postprocessing.scene = new Scene();
 
-        width: width,
-        height: height
+    postprocessing.camera = new OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, - 10000, 10000 );
+    postprocessing.camera.position.z = 100;
+
+    postprocessing.scene.add( postprocessing.camera );
+
+    const pars = { minFilter: LinearFilter, magFilter: LinearFilter, format: RGBFormat };
+    postprocessing.rtTextureDepth = new WebGLRenderTarget( width, height, pars );
+    postprocessing.rtTextureColor = new WebGLRenderTarget( width, height, pars );
+
+    const bokeh_shader = BokehShader;
+
+    postprocessing.bokeh_uniforms = UniformsUtils.clone( bokeh_shader.uniforms );
+
+    postprocessing.bokeh_uniforms[ 'tColor' ].value = postprocessing.rtTextureColor.texture;
+    postprocessing.bokeh_uniforms[ 'tDepth' ].value = postprocessing.rtTextureDepth.texture;
+    postprocessing.bokeh_uniforms[ 'textureWidth' ].value = width;
+    postprocessing.bokeh_uniforms[ 'textureHeight' ].value = height;
+    postprocessing.bokeh_uniforms[ 'shaderFocus' ].value = false;
+
+    postprocessing.materialBokeh = new ShaderMaterial( {
+
+        uniforms: postprocessing.bokeh_uniforms,
+        vertexShader: bokeh_shader.vertexShader,
+        fragmentShader: bokeh_shader.fragmentShader,
+        defines: {
+            RINGS: shaderSettings.rings,
+            SAMPLES: shaderSettings.samples
+        }
+
     } );
 
-    const composer = new EffectComposer( renderer );
-
-    composer.addPass( renderPass );
-    composer.addPass( bokehPass );
-
-    postprocessing.composer = composer;
-    postprocessing.bokeh = bokehPass;
+    postprocessing.quad = new Mesh( new PlaneBufferGeometry( width, height ), postprocessing.materialBokeh );
+    postprocessing.quad.position.z = - 500;
+    postprocessing.scene.add( postprocessing.quad );
 
     return postprocessing;
-
 }
 
-function computeFocusDistance(scene, camera, mouse, distance) {
+function shaderUpdate(postProcessing, rings, samples) {
+    postProcessing.materialBokeh.defines.RINGS = rings;
+    postProcessing.materialBokeh.defines.SAMPLES = samples;
+    postProcessing.materialBokeh.needsUpdate = true;
+
+    return postProcessing;
+}
+
+function computeFocusDistance(scene, camera, mouse) {
     raycaster.setFromCamera( mouse, camera );
     var intersects = raycaster.intersectObjects( scene.children, true );   
     if ( intersects.length > 0 ) {    
         var targetDistance = intersects[0].distance;    
-        distance += (targetDistance - distance) * 0.03;    
-        return distance;
+        distance += (targetDistance - distance) * 0.03; 
+        const sdistance = smoothstep( camera.near, camera.far, distance );
+        const ldistance = linearize( camera, 1 - sdistance );   
+        return ldistance;
     }else
         return distance; 
 }
 
+function linearize(camera, depth) {
+    const zfar = camera.far;
+    const znear = camera.near;
+    return - zfar * znear / ( depth * ( zfar - znear ) - zfar );
+}
+
+function smoothstep( near, far, depth ) {
+    const x = saturate( ( depth - near ) / ( far - near ) );
+    return x * x * ( 3 - 2 * x );
+}
+
+function saturate( x ) {
+    return Math.max( 0, Math.min( 1, x ) );
+}
 
 
-export {createRenderer, createPostProcessing, computeFocusDistance};
+
+export {createRenderer, createPostProcessing, shaderUpdate, computeFocusDistance};

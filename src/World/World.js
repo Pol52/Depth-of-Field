@@ -4,17 +4,18 @@ import { createScene } from './components/scene.js';
 import { createLights } from './components/lights.js';
 import { createControls } from './systems/controls.js';
 
-import { createRenderer, createPostProcessing, computeFocusDistance } from './systems/renderer.js';
+import { createRenderer, createPostProcessing, computeFocusDistance, shaderUpdate } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
 
 import { GUI } from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
-import { Vector2 } from '../../node_modules/three/build/three.module.js';
+import { ShaderMaterial, Vector2 } from '../../node_modules/three/build/three.module.js';
+import { BokehDepthShader } from '../../node_modules/three/examples/jsm/shaders/BokehShader2.js';
 
 let camera;
 let scene;
 let renderer;
 let controls;
-
+let materialDepth;
 let width = window.innerWidth;
 let height = window.innerHeight;
 let windowHalfX = window.innerWidth / 2;
@@ -44,46 +45,84 @@ class World {
         const meshGroup = createMeshGroup();
         const {mainLight, ambientLight} = createLights();        
         scene.add(meshGroup, mainLight, ambientLight);
+
+        const depthShader = BokehDepthShader;
+
+        materialDepth = new ShaderMaterial( {
+            uniforms: depthShader.uniforms,
+            vertexShader: depthShader.vertexShader,
+            fragmentShader: depthShader.fragmentShader
+        } );
+
+        materialDepth.uniforms[ 'mNear' ].value = camera.near;
+        materialDepth.uniforms[ 'mFar' ].value = camera.far;
+
             
-        postProcessing = createPostProcessing(scene, camera, renderer, width, height);
+        postProcessing = createPostProcessing(width, height);
 
         container.style.touchAction = "none";        
         document.addEventListener( "mousemove", onDocumentMouseMove, false );
 
         const scatterBallsFn = () => scatterBalls(meshGroup);
+        const shaderUpdateFn = () => {
+            postProcessing = shaderUpdate(postProcessing, effectController.rings, effectController.samples);
+        }
+
         effectController = {
-            focus: 25.5,
-            aperture: 25,
-            maxblur: 0.04,
+            enabled: true,
             autoRotation: false,
             focusOnMouse: false,
-            'Scatter!': scatterBallsFn
+            'Scatter!': scatterBallsFn, 
+            fstop: 2.2,
+            maxblur: 1.0,
+            focalDepth: 2.8,
+            fringe: 0.7,
+            focalLength: 14,
+            rings: 3,
+            samples: 4
         };
 
-        const matChanger = function ( ) {
-            postProcessing.bokeh.uniforms[ "focus" ].value = effectController.focus;
-            postProcessing.bokeh.uniforms[ "aperture" ].value = effectController.aperture * 0.00001;
-            postProcessing.bokeh.uniforms[ "maxblur" ].value = effectController.maxblur;
+        const matChanger = function () {
+            for ( const e in effectController ) {
+                if ( e in postProcessing.bokeh_uniforms ) {
+                    postProcessing.bokeh_uniforms[ e ].value = effectController[ e ];
+                }
+            }
+
+            postProcessing.enabled = effectController.enabled;
+            postProcessing.bokeh_uniforms['znear'].value = camera.near;
+            postProcessing.bokeh_uniforms['zfar'].value = camera.far;
+            camera.setFocalLength( effectController.focalLength );
             controls.autoRotate = effectController.autoRotation;
             focusOnMouse = effectController.focusOnMouse;
             controls.update();
         };
-    
+
         const gui = new GUI();
-        gui.add( effectController, "focus", 0.0, 300.0, 0.5 ).listen().onChange( matChanger );
-        gui.add( effectController, "aperture", 0, 50, 0.1 ).onChange( matChanger );
-        gui.add( effectController, "maxblur", 0.0, 0.05, 0.001 ).onChange( matChanger );
+        gui.add( effectController, 'enabled' ).onChange( matChanger );
+        gui.add( effectController, 'focalDepth', 0.0, 30.0, 0.5 ).listen().onChange( matChanger );
+        gui.add( effectController, 'fstop', 0.1, 22, 0.001 ).onChange( matChanger );
+        gui.add( effectController, 'maxblur', 0.0, 5.0, 0.025 ).onChange( matChanger );
+        gui.add( effectController, 'fringe', 0, 5, 0.001 ).onChange( matChanger );
+        gui.add( effectController, 'focalLength', 14, 80, 0.001 ).onChange( matChanger );
+        gui.add( effectController, 'rings', 1, 8 ).step( 1 ).onChange( shaderUpdateFn );
+        gui.add( effectController, 'samples', 1, 13 ).step( 1 ).onChange( shaderUpdateFn );
         gui.add( effectController, "autoRotation", true).onChange( matChanger );
         gui.add( effectController, "focusOnMouse", false).onChange(matChanger);
         gui.add( effectController, "Scatter!")
-        gui.close();
-    
-        matChanger();         
+        gui.close();       
         
         const resizer = new Resizer(width, height, camera, renderer, postProcessing);
         resizer.onResize = () => {
+            postProcessing.rtTextureDepth.setSize(width, height);
+            postProcessing.rtTextureColor.setSize(width, height);
+
+            postProcessing.bokeh_uniforms['textureWidth'].value = width;
+            postProcessing.bokeh_uniforms['textureHeight'].value = height;
             this.render();
         }
+
+        matChanger();  
     }
 
     render() {        
@@ -98,17 +137,47 @@ function animate() {
 }
 
 function render() {
-    if(focusOnMouse){
-        distance = computeFocusDistance(scene, camera, mouse, distance);
-        postProcessing.bokeh.uniforms['focus'].value = distance;
-        effectController['focus'] = distance;  
-    }        
-    postProcessing.composer.render( 0.1 );
+
+    camera.updateMatrixWorld();
+
+    if ( focusOnMouse ) {
+        distance = computeFocusDistance(scene, camera, mouse);
+        postProcessing.bokeh_uniforms[ 'focalDepth' ].value = distance;
+        effectController[ 'focalDepth' ] = distance;
+    }
+
+    if ( postProcessing.enabled ) {
+        renderer.clear();
+
+        renderer.setRenderTarget( postProcessing.rtTextureColor );
+        renderer.clear();
+        renderer.render( scene, camera );
+
+        scene.overrideMaterial = materialDepth;
+        renderer.setRenderTarget( postProcessing.rtTextureDepth );
+        renderer.clear();
+        renderer.render( scene, camera );
+        scene.overrideMaterial = null;        
+        renderer.setRenderTarget( null );
+        renderer.render( postProcessing.scene, postProcessing.camera ); 
+    } else {
+
+        scene.overrideMaterial = null;
+
+        renderer.setRenderTarget( null );
+        renderer.clear();
+        renderer.render( scene, camera );
+
+    }
 }
 
 function onDocumentMouseMove( event ) {
-    mouse.x = ( event.clientX - windowHalfX ) / windowHalfX;
-    mouse.y = - ( event.clientY - windowHalfY ) / windowHalfY;
+    if (event.isPrimary === false) return;
+
+    mouse.x = (event.clientX - windowHalfX) / windowHalfX;
+    mouse.y = - (event.clientY - windowHalfY) / windowHalfY;
+
+    postProcessing.bokeh_uniforms['focusCoords'].value.set(event.clientX / width, 1 - ( event.clientY / height ));
 }
 
 

@@ -7,7 +7,6 @@ const setSize = (width, height, camera, renderer, postprocessing) => {
 
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
-    postprocessing.composer.setSize( width, height );
 }
 
 class Resizer {
