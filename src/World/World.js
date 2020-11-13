@@ -10,6 +10,7 @@ import { Resizer } from './systems/Resizer.js';
 import { GUI } from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import { ShaderMaterial, Vector2 } from '../../node_modules/three/build/three.module.js';
 import { BokehDepthShader } from '../../node_modules/three/examples/jsm/shaders/BokehShader2.js';
+import Stats from '../../node_modules/three/examples/jsm/libs/stats.module.js';
 
 let camera;
 let scene;
@@ -27,6 +28,7 @@ let distance = 100;
 let effectController;
 let focusOnMouse;
 let postProcessing = {};
+let stats;
 
 class World {    
 
@@ -120,7 +122,10 @@ class World {
             postProcessing.bokeh_uniforms['textureWidth'].value = width;
             postProcessing.bokeh_uniforms['textureHeight'].value = height;
             this.render();
-        }
+        }   
+
+        stats = new Stats();
+        container.appendChild(stats.dom);
 
         matChanger();  
     }
@@ -133,12 +138,12 @@ class World {
 function animate() {
     requestAnimationFrame( animate, renderer.domElement );
     controls.update();
+    stats.begin();
     render();
+    stats.end();
 }
 
 function render() {
-
-    camera.updateMatrixWorld();
 
     if ( focusOnMouse ) {
         distance = computeFocusDistance(scene, camera, mouse);
