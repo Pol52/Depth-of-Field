@@ -1,16 +1,20 @@
-import { LinearFilter, 
+
+import { BufferGeometry, CircleBufferGeometry, ConeBufferGeometry, CylinderBufferGeometry, LinearFilter, 
         Mesh, 
         OrthographicCamera, 
+        Plane, 
         PlaneBufferGeometry,
         Raycaster, 
-        RGBFormat,
+        RGBAFormat,
         Scene,
         ShaderMaterial,
         UniformsUtils,
+        Vector2,
         WebGLRenderer,
         WebGLRenderTarget } from '../../../node_modules/three/build/three.module.js';
 
-import { BokehShader } from '../../../node_modules/three/examples/jsm/shaders/BokehShader2.js';
+import { BokehShader } from '../../../node_modules/three/examples/jsm/shaders/BokehShader.js';
+import { BokehShaderNew } from '../../../assets/BokehShaderNew.js';
 
 let raycaster = new Raycaster();
 let distance = 100;
@@ -20,7 +24,7 @@ const shaderSettings = {
 };
 
 function createRenderer() {
-    const renderer = new WebGLRenderer({ antialias: true });
+    const renderer = new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.physicallyCorrectLights = true;
     
     return renderer;
@@ -37,7 +41,7 @@ function createPostProcessing(width, height){
 
     postprocessing.scene.add( postprocessing.camera );
 
-    const pars = { minFilter: LinearFilter, magFilter: LinearFilter, format: RGBFormat };
+    const pars = { minFilter: LinearFilter, magFilter: LinearFilter, format: RGBAFormat };
     postprocessing.rtTextureDepth = new WebGLRenderTarget( width, height, pars );
     postprocessing.rtTextureColor = new WebGLRenderTarget( width, height, pars );
 
@@ -45,27 +49,22 @@ function createPostProcessing(width, height){
 
     postprocessing.bokeh_uniforms = UniformsUtils.clone( bokeh_shader.uniforms );
 
-    postprocessing.bokeh_uniforms[ 'tColor' ].value = postprocessing.rtTextureColor.texture;
-    postprocessing.bokeh_uniforms[ 'tDepth' ].value = postprocessing.rtTextureDepth.texture;
-    postprocessing.bokeh_uniforms[ 'textureWidth' ].value = width;
-    postprocessing.bokeh_uniforms[ 'textureHeight' ].value = height;
-    postprocessing.bokeh_uniforms[ 'shaderFocus' ].value = false;
+    postprocessing.bokeh_uniforms['tDepth'].value = postprocessing.rtTextureDepth.texture;
+    postprocessing.bokeh_uniforms['tColor'].value = postprocessing.rtTextureColor.texture;    
+    /* postprocessing.bokeh_uniforms['iResolution'].value = new Vector2(width, height);  */
 
     postprocessing.materialBokeh = new ShaderMaterial( {
-
         uniforms: postprocessing.bokeh_uniforms,
         vertexShader: bokeh_shader.vertexShader,
-        fragmentShader: bokeh_shader.fragmentShader,
-        defines: {
-            RINGS: shaderSettings.rings,
-            SAMPLES: shaderSettings.samples
-        }
-
+        fragmentShader: bokeh_shader.fragmentShader,        
+        defines: Object.assign( {}, bokeh_shader.defines )
     } );
 
     postprocessing.quad = new Mesh( new PlaneBufferGeometry( width, height ), postprocessing.materialBokeh );
-    postprocessing.quad.position.z = - 500;
+    
+    postprocessing.quad.position.z = -500;
     postprocessing.scene.add( postprocessing.quad );
+
 
     return postprocessing;
 }
@@ -86,7 +85,7 @@ function computeFocusDistance(scene, camera, mouse) {
         distance += (targetDistance - distance) * 0.03; 
         const sdistance = smoothstep( camera.near, camera.far, distance );
         const ldistance = linearize( camera, 1 - sdistance );   
-        return ldistance;
+        return distance;
     }else
         return distance; 
 }
