@@ -70,7 +70,7 @@ class World {
             focusOnMouse: false,
             'Scatter!': scatterBallsFn,   
             focalDepth : 2.8 ,
-            focalLength :  50.0 ,
+            focalLength :  80.0 ,
             fstop:  2.2,
             maxblur: 1.8,
             dithering: 0.0001,
@@ -95,8 +95,8 @@ class World {
         
         const gui = new GUI();
         gui.add( effectController, "enabled" ).onChange( matChanger );
-        gui.add( effectController, "focalDepth", 10, 1000.0, 1 ).listen().onChange( matChanger );
-        gui.add( effectController, "focalLength", 14, 80, 0.001 ).onChange( matChanger );
+        gui.add( effectController, "focalDepth", 1, 50.0, 1 ).listen().onChange( matChanger );
+        gui.add( effectController, "focalLength", 70, 200, 1 ).onChange( matChanger );
         gui.add( effectController, "fstop", 0.1, 22, 0.05 ).onChange( matChanger );
         gui.add( effectController, "dithering", 0.0001, 0.005, 0.0001 ).onChange( matChanger );
         gui.add( effectController, "maxblur", 0.0, 5.0, 0.025 ).onChange( matChanger );
