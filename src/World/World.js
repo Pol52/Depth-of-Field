@@ -4,13 +4,12 @@ import { createScene } from './components/scene.js';
 import { createLights } from './components/lights.js';
 import { createControls } from './systems/controls.js';
 
-import { createRenderer, createPostProcessing, computeFocusDistance, shaderUpdate } from './systems/renderer.js';
+import { createRenderer, createPostProcessing, computeFocusDistance } from './systems/renderer.js';
 import { Resizer } from './systems/Resizer.js';
 
 import { GUI } from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
-import { MeshDepthMaterial, BasicDepthPacking, NoBlending, RGBADepthPacking, ShaderMaterial, UniformsUtils, Vector2, WebGLRenderTarget } from '../../node_modules/three/build/three.module.js';
-import { BokehDepthShader } from '../../node_modules/three/examples/jsm/shaders/BokehShader2.js';
-import Stats from '../../node_modules/three/examples/jsm/libs/stats.module.js';
+import { ShaderMaterial, Vector2 } from '../../node_modules/three/build/three.module.js';
+import { BokehDepthShader } from '../../assets/BokehDepthShader.js';
 
 let camera;
 let scene;
@@ -28,9 +27,7 @@ let distance = 100;
 let effectController;
 let focusOnMouse;
 let postProcessing = {};
-let stats;
-let renderTargetDepth;
-let materialBokeh;
+
 class World {    
 
     constructor(container) {
@@ -60,57 +57,27 @@ class World {
         materialDepth.uniforms[ 'mNear' ].value = camera.near;
         materialDepth.uniforms[ 'mFar' ].value = camera.far;
         
-            
         postProcessing = createPostProcessing(width, height);
 
         container.style.touchAction = "none";        
         document.addEventListener( "mousemove", onDocumentMouseMove, false );
 
         const scatterBallsFn = () => scatterBalls(meshGroup);
-        const shaderUpdateFn = () => {
-            postProcessing = shaderUpdate(postProcessing, effectController.rings, effectController.samples);
-        }
-        
-        effectController = {
-            enabled: true,
-            autoRotation: false,
-            focusOnMouse: false,
-            'Scatter!': scatterBallsFn, 
-            maxblur: 0.04,
-            focus:6,
-            focalLength: 14,
-            aperture:25
-        };
 
-        /* effectController = { 
+        effectController = { 
             enabled: true,
             autoRotation: false,
             focusOnMouse: false,
             'Scatter!': scatterBallsFn,   
-            focalDepth : 10000 ,
-            focalLength :  14.0 ,
-            fstop:  2.8,
-            dithering : 0.0001 ,
-            maxblur :  2.0 ,
-        } */
+            focalDepth : 2.8 ,
+            focalLength :  50.0 ,
+            fstop:  2.2,
+            maxblur: 1.8,
+            dithering: 0.0001,
+            fringe: 1
+        } 
 
         const matChanger = function () {
-            postProcessing.bokeh_uniforms[ "focus" ].value = effectController.focus;
-            postProcessing.bokeh_uniforms[ "aperture" ].value = effectController.aperture * 0.00001;
-            postProcessing.bokeh_uniforms[ "maxblur" ].value = effectController.maxblur;
-            controls.autoRotate = effectController.autoRotation;
-            focusOnMouse = effectController.focusOnMouse;
-            controls.update();
-
-            postProcessing.enabled = effectController.enabled;
-            postProcessing.bokeh_uniforms['nearClip'].value = camera.near;
-            postProcessing.bokeh_uniforms['farClip'].value = camera.far; 
-            postProcessing.bokeh_uniforms['aspect'].value = 1.0;
-            camera.setFocalLength( effectController.focalLength );
-            controls.update();
-        };
-
-        /* const matChanger = function () {
             for ( const e in effectController ) {
                 if ( e in postProcessing.bokeh_uniforms ) {
                     postProcessing.bokeh_uniforms[ e ].value = effectController[ e ];
@@ -124,39 +91,27 @@ class World {
             controls.autoRotate = effectController.autoRotation;
             focusOnMouse = effectController.focusOnMouse;
             controls.update();
-        };   */ 
-
-        const gui = new GUI();
-        gui.add( effectController, 'enabled' ).onChange( matChanger );
-        gui.add( effectController, 'focus', 0.0, 1000.0, 0.5 ).listen().onChange( matChanger );
-        gui.add( effectController, 'aperture', 0.0, 100.0, 0.5 ).listen().onChange( matChanger );
-        gui.add( effectController, 'maxblur', 0.0, 5.0, 0.025 ).onChange( matChanger );
-        gui.add( effectController, 'focalLength', 14, 80, 0.001 ).onChange( matChanger );
-        gui.add( effectController, "autoRotation", true).onChange( matChanger );
-        gui.add( effectController, "focusOnMouse", false).onChange(matChanger);
-        gui.add( effectController, "Scatter!")
-        gui.close(); 
+        };  
         
-        /* const gui = new GUI();
-        gui.add( effectController, 'enabled' ).onChange( matChanger );
-        gui.add( effectController, 'focalDepth', 0.6, 300.0, 0.5 ).listen().onChange( matChanger );
-        gui.add( effectController, 'fstop', 0.1, 22, 0.001 ).onChange( matChanger );
-        gui.add( effectController, 'maxblur', 0.0, 5.0, 0.025 ).onChange( matChanger );
-        gui.add( effectController, 'focalLength', 14, 80, 0.001 ).onChange( matChanger );
+        const gui = new GUI();
+        gui.add( effectController, "enabled" ).onChange( matChanger );
+        gui.add( effectController, "focalDepth", 10, 1000.0, 1 ).listen().onChange( matChanger );
+        gui.add( effectController, "focalLength", 14, 80, 0.001 ).onChange( matChanger );
+        gui.add( effectController, "fstop", 0.1, 22, 0.05 ).onChange( matChanger );
+        gui.add( effectController, "dithering", 0.0001, 0.005, 0.0001 ).onChange( matChanger );
+        gui.add( effectController, "maxblur", 0.0, 5.0, 0.025 ).onChange( matChanger );
+        gui.add( effectController, "fringe", 1, 10, 0.5 ).onChange( matChanger );
         gui.add( effectController, "autoRotation", true).onChange( matChanger );
         gui.add( effectController, "focusOnMouse", false).onChange(matChanger);
         gui.add( effectController, "Scatter!")
-        gui.close();  */
+        gui.close();
         
         const resizer = new Resizer(width, height, camera, renderer, postProcessing);
         resizer.onResize = () => {
             postProcessing.rtTextureDepth.setSize(width, height);
             postProcessing.rtTextureColor.setSize(width, height);
             this.render();
-        }   
-
-        stats = new Stats();
-        container.appendChild(stats.dom);
+        }
 
         matChanger();  
     }
@@ -169,30 +124,29 @@ class World {
 function animate() {
     requestAnimationFrame( animate, renderer.domElement );
     controls.update();
-    stats.begin();
     render();
-    stats.end();
 }
 
 function render() {
 
     if ( focusOnMouse ) {
         distance = computeFocusDistance(scene, camera, mouse);
-        postProcessing.bokeh_uniforms[ 'focus' ].value = distance;
-        effectController[ 'focus' ] = distance;
+        postProcessing.bokeh_uniforms[ 'focalDepth' ].value = distance;
+        effectController[ 'focalDepth' ] = distance;
     }
 
     if ( postProcessing.enabled ) {
         renderer.clear();
-
+        
         renderer.setRenderTarget( postProcessing.rtTextureColor );
         renderer.clear();
         renderer.render( scene, camera ); 
 
-        scene.overrideMaterial = materialDepth; 
+        scene.overrideMaterial = materialDepth;
         renderer.setRenderTarget( postProcessing.rtTextureDepth );
         renderer.clear(); 
         renderer.render( scene, camera );
+
         scene.overrideMaterial = null;        
         renderer.setRenderTarget( null );
         renderer.render( postProcessing.scene, postProcessing.camera ); 
@@ -212,8 +166,6 @@ function onDocumentMouseMove( event ) {
 
     mouse.x = (event.clientX - windowHalfX) / windowHalfX;
     mouse.y = - (event.clientY - windowHalfY) / windowHalfY;
-
-    /* postProcessing.bokeh_uniforms['focusCoords'].value.set(event.clientX / width, 1 - ( event.clientY / height )); */
 }
 
 

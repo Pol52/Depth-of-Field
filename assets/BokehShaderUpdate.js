@@ -2,7 +2,7 @@ import {
 	Vector2
 } from "../node_modules/three/build/three.module.js";
 
-var BokehShaderNew = {
+var BokehShaderUpdate = {
     uniforms: {
         tDepth : { type: "t", texture: null },
         tRender : { type: "t", texture: null },
@@ -31,48 +31,38 @@ var BokehShaderNew = {
     fragmentShader: [
         "#define PI 3.1415926",
 
-        "uniform sampler2D tDepth;", // depth buffer
-        "uniform sampler2D tRender;", // render buffer
-        "uniform float znear; ",// camera clipping near plane
-        "uniform float zfar;", // camera clipping far plane
-        "uniform vec2 iResolution;", // screen resolution
-        "uniform float focalLength;", // camera focal length
-        "uniform float focalDepth;", // camera focal depth
-        "uniform float fstop;", // camera fstop
-        "uniform float dithering;", // amount of dithering
-        "uniform float maxblur;", // maximum amount of blur
-        "uniform float threshold;", // highlight threshold;
-        "uniform float gain;", // highlight gain;
-        "uniform float bias;", // bokeh edge bias
-        "uniform float fringe;", // bokeh chromatic aberration / fringing,
+        "uniform sampler2D tDepth;",
+        "uniform sampler2D tRender;",
+        "uniform float znear; ",
+        "uniform float zfar;", 
+        "uniform vec2 iResolution;", 
+        "uniform float focalLength;", 
+        "uniform float focalDepth;", 
+        "uniform float fstop;", 
+        "uniform float dithering;", 
+        "uniform float maxblur;", 
+        "uniform float threshold;", 
+        "uniform float gain;", 
+        "uniform float bias;", 
+        "uniform float fringe;", 
         
-        "varying vec2 vUv;", // uv coords
+        "varying vec2 vUv;", 
         
-        // constants TODO should be const-qualified
-        "",
-        "float dbsize = 1.25;", // depth blur size
-        "const float CoC = 0.03;", //circle of confusion size in mm (35mm film = 0.03mm)
+        "float dbsize = 1.25;", 
+        "const float CoC = 0.03;", 
         "const int rings = 3;",
         "const int samples = 4;",
         "const int maxringsamples = rings * samples;",
         
         
-        // generating noise / pattern texture for dithering
         "vec2 rand(vec2 coord) {",
         
             "float noiseX = ((fract(1.0-coord.s*(iResolution.x/2.0))*0.25)+(fract(coord.t*(iResolution.y/2.0))*0.75))*2.0-1.0;",
             "float noiseY = ((fract(1.0-coord.s*(iResolution.x/2.0))*0.75)+(fract(coord.t*(iResolution.y/2.0))*0.25))*2.0-1.0;",
         
-            // if (noise) {
-            // 	noiseX = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233))) * 43758.5453),0.0,1.0)*2.0-1.0;
-            // 	noiseY = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233)*2.0)) * 43758.5453),0.0,1.0)*2.0-1.0;
-            // }
-        
             "return vec2(noiseX,noiseY);",
         "}",
         
-        // Depth buffer blur
-        // calculate the depth from a given set of coordinates
         "float bdepth(vec2 coords) {",
             "float d = 0.0, kernel[9];",
             "vec2 texel = vec2(1.0/iResolution.x,1.0/iResolution.y);",
@@ -103,16 +93,15 @@ var BokehShaderNew = {
             "return d;",
         "}",
         
-        // processing the sample
         "vec3 color(vec2 coords,float blur) {",
             "vec3 col = vec3(0.0);",
             "vec2 texel = vec2(1.0/iResolution.x,1.0/iResolution.y);",
-            // read from the render buffer at an offset
+            
             "col.r = texture2D(tRender,coords + vec2(0.0,1.0)*texel*fringe*blur).r;",
             "col.g = texture2D(tRender,coords + vec2(-0.866,-0.5)*texel*fringe*blur).g;",
             "col.b = texture2D(tRender,coords + vec2(0.866,-0.5)*texel*fringe*blur).b;",
         
-            "vec3 lumcoeff = vec3(0.299,0.587,0.114);", // arbitrary numbers???
+            "vec3 lumcoeff = vec3(0.299,0.587,0.114);", 
             "float lum = dot(col.rgb, lumcoeff);",
             "float thresh = max((lum-threshold)*gain, 0.0);",
             "return col+mix(vec3(0.0),col,thresh*blur);",
@@ -136,9 +125,9 @@ var BokehShaderNew = {
         "{",
             "float depth = linearize(bdepth(vUv.xy));",
         
-            "float f = focalLength;", // focal length in mm,
-            "float d = focalDepth*1000.0;", // focal plane in mm,
-            "float o = depth*1000.0;", // depth in mm,
+            "float f = focalLength;", 
+            "float d = focalDepth*1000.0;", 
+            "float o = depth*1000.0;", 
         
             "float a = (o*f)/(o-f);",
             "float b = (d*f)/(d-f);",
@@ -146,14 +135,11 @@ var BokehShaderNew = {
         
             "float blur = clamp(abs(a-b)*c,0.0,1.0);",
         
-            // calculation of pattern for dithering
             "vec2 noise = rand(vUv.xy)*dithering*blur;",
         
-            // getting blur x and y step factor
             "float w = (1.0/iResolution.x)*blur*maxblur+noise.x;",
             "float h = (1.0/iResolution.y)*blur*maxblur+noise.y;",
         
-            // calculation of final color,
             "vec3 col = texture2D(tRender, vUv.xy).rgb;",
         
             "if ( blur >= 0.05 ) {",
@@ -163,12 +149,11 @@ var BokehShaderNew = {
                 "for (int i = 1; i <= rings; i++) {",
                     "ringsamples = i * samples;",
         
-                    "for (int j = 0 ; j < maxringsamples ; j++) {",
-                        "if (j >= ringsamples) break;",
+                    "for (int j = 0 ; j < ringsamples + 1 ; j++) {",
                         "s += gather(float(i), float(j), ringsamples, col, w, h, blur);",
                     "}",
                 "}",
-                "col /= s;", //divide by sample count
+                "col /= s;", 
             "}",
         
             "gl_FragColor = vec4(col,1.0);",
@@ -178,7 +163,7 @@ var BokehShaderNew = {
 
 
 				
-export {BokehShaderNew};
+export { BokehShaderUpdate };
 
 
 
