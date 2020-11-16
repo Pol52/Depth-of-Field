@@ -4,7 +4,7 @@ import { OrbitControls } from '../../../node_modules/three/examples/jsm/controls
 function createControls(camera, canvas) {
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
-    controls.target = new Vector3(-17.27420808731932, 1.4391236900241409,21.24044366221997);
+    controls.target = new Vector3(-11.5, 1.3, 19.3);
     controls.autoRotate = true; 
 
     return controls;
