@@ -6,8 +6,8 @@ var BokehShaderUpdate = {
     uniforms: {
         tDepth : { type: "t", texture: null },
         tRender : { type: "t", texture: null },
-        znear : { type: "f", value : 0.1 },
-        zfar : { type: "f", value : 1000 },
+        nearClip : { type: "f", value : 0.1 },
+        farClip : { type: "f", value : 1000 },
         iResolution : { type: "v2", value : new Vector2() },
         focalDepth : { type: "f", value: 10000 },
         focalLength : { type: "f", value: 10.0 },
@@ -30,8 +30,8 @@ var BokehShaderUpdate = {
 
         "uniform sampler2D tDepth;",
         "uniform sampler2D tRender;",
-        "uniform float znear; ",
-        "uniform float zfar;", 
+        "uniform float nearClip; ",
+        "uniform float farClip;", 
         "uniform vec2 iResolution;", 
         "uniform float focalLength;", 
         "uniform float focalDepth;", 
@@ -107,7 +107,7 @@ var BokehShaderUpdate = {
         "}",
         
         "float linearize(float depth) {",
-            "return -zfar * znear / (depth * (zfar - znear) - zfar);",
+            "return -farClip * nearClip / (depth * (farClip - nearClip) - farClip);",
         "}",
         
         "void main(void)",

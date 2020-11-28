@@ -11,7 +11,6 @@ function createCamera() {
     camera.focus = 1;    
     camera.position.set(32.6, 0.4, 111.5);
     camera.rotation.Z = Math.PI / 2;
-    camera.setFocalLength( 14 );
     return camera;
 }
 
