@@ -14,9 +14,6 @@ var BokehShaderUpdate = {
         fstop: { type: "f", value: 0.5 },
         dithering : { type: "f", value: 0.0001 },
         maxblur : { type: "f", value: 2.0 },
-        threshold : { type: "f", value: 4 },
-        gain : { type: "f", value: 0.0 },
-        bias : { type: "f", value: 0.0 },
         fringe : { type: "f", value: 0 },
     },
     vertexShader: [
@@ -41,9 +38,6 @@ var BokehShaderUpdate = {
         "uniform float fstop;", 
         "uniform float dithering;", 
         "uniform float maxblur;", 
-        "uniform float threshold;", 
-        "uniform float gain;", 
-        "uniform float bias;", 
         "uniform float fringe;", 
         
         "varying vec2 vUv;", 
@@ -100,21 +94,16 @@ var BokehShaderUpdate = {
             "col.r = texture2D(tRender,coords + vec2(0.0,1.0)*texel*fringe*blur).r;",
             "col.g = texture2D(tRender,coords + vec2(-0.866,-0.5)*texel*fringe*blur).g;",
             "col.b = texture2D(tRender,coords + vec2(0.866,-0.5)*texel*fringe*blur).b;",
-        
-            "vec3 lumcoeff = vec3(0.299,0.587,0.114);", 
-            "float lum = dot(col.rgb, lumcoeff);",
-            "float thresh = max((lum-threshold)*gain, 0.0);",
-            "return col+mix(vec3(0.0),col,thresh*blur);",
+
+            "return col;",
         "}",
         
-        "float gather(float i, float j, int ringsamples, inout vec3 col, float w, float h, float blur) {",
+        "void gather(float i, float j, int ringsamples, inout vec3 col, float w, float h, float blur) {",
             "float rings2 = float(rings);",
             "float step = PI*2.0 / float(ringsamples);",
             "float pw = cos(j*step)*i;",
             "float ph = sin(j*step)*i;",
-            "float p = 1.0;",
-            "col += color(vUv.xy + vec2(pw*w,ph*h), blur) * mix(1.0, i/rings2, bias) * p;",
-            "return 1.0 * mix(1.0, i /rings2, bias) * p;",
+            "col += color(vUv.xy + vec2(pw*w,ph*h), blur) * 1.0;",
         "}",
         
         "float linearize(float depth) {",
@@ -131,7 +120,7 @@ var BokehShaderUpdate = {
         
             "float a = (o*f)/(o-f);",
             "float b = (d*f)/(d-f);",
-            "float c = (d-f)/(d*fstop*CoC);",
+            "float c = 1.0/(fstop*CoC);",
         
             "float blur = clamp(abs(a-b)*c,0.0,1.0);",
         
@@ -150,7 +139,8 @@ var BokehShaderUpdate = {
                     "ringsamples = i * samples;",
         
                     "for (int j = 0 ; j < ringsamples + 1 ; j++) {",
-                        "s += gather(float(i), float(j), ringsamples, col, w, h, blur);",
+                        "s += 1.0;",
+                        "gather(float(i), float(j), ringsamples, col, w, h, blur);",
                     "}",
                 "}",
                 "col /= s;", 

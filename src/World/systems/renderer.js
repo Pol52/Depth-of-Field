@@ -68,7 +68,8 @@ function computeFocusDistance(scene, camera, mouse) {
         var targetDistance = intersects[0].distance;    
         distance += (targetDistance - distance) * 0.03; 
         const sdistance = smoothstep( camera.near, camera.far, distance );
-        const ldistance = linearize( camera, 1 - sdistance );   
+        const ldistance = linearize( camera, 1 - sdistance ); 
+        console.log(distance, ' ', sdistance, ' ', ldistance); 
         return ldistance;
     }else
         return distance; 

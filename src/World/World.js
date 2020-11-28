@@ -69,7 +69,7 @@ class World {
             autoRotation: false,
             focusOnMouse: false,
             'Scatter!': scatterBallsFn,   
-            focalDepth : 2.8 ,
+            focalDepth : 44 ,
             focalLength :  80.0 ,
             fstop:  2.2,
             maxblur: 1.8,
