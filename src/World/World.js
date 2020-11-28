@@ -8,6 +8,7 @@ import { createRenderer, createPostProcessing, computeFocusDistance, changeShade
 import { Resizer } from './systems/Resizer.js';
 
 import { GUI } from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
+import Stats from '../../node_modules/three/examples/jsm/libs/stats.module.js';
 import { ShaderMaterial, Vector2 } from '../../node_modules/three/build/three.module.js';
 import { BokehDepthShader } from '../../assets/BokehDepthShader.js';
 
@@ -28,9 +29,9 @@ let effectController;
 let matChanger;
 let focusOnMouse;
 let postProcessing = {};
-let gui = new GUI();
 let newShaderFolder;
 let oldShaderFolder;
+let stats;
 
 class World {    
 
@@ -101,7 +102,10 @@ class World {
             controls.autoRotate = effectController.autoRotation;
             focusOnMouse = effectController.focusOnMouse;
             controls.update();
-        };  
+        };
+          
+        const gui = new GUI();
+
         const commonFolder = gui.addFolder('Common Settings');
         commonFolder.add(effectController, "enabled").onChange(matChanger);
         commonFolder.add(effectController, "focalLength", 70, 200, 1).onChange(matChanger);        
@@ -116,7 +120,7 @@ class World {
         newShaderFolder.add(effectController, "fstop", 0.1, 22, 0.05).onChange(matChanger);
         newShaderFolder.add(effectController, "dithering", 0.0001, 0.005, 0.0001).onChange(matChanger);
         newShaderFolder.add(effectController, "maxblur", 0.0, 5.0, 0.025).listen().onChange(matChanger);
-        newShaderFolder.add(effectController, "fringe", 1, 10, 0.5).onChange(matChanger);
+        newShaderFolder.add(effectController, "fringe", 0, 10, 0.5).onChange(matChanger);
         newShaderFolder.open();
 
         oldShaderFolder = gui.addFolder('Old Shader Settings'); 
@@ -131,6 +135,9 @@ class World {
             this.render();
         }
 
+        stats = new Stats();   
+        container.appendChild(stats.dom);
+
         matChanger();  
     }
 
@@ -143,6 +150,7 @@ function animate() {
     requestAnimationFrame(animate, renderer.domElement);
     controls.update();
     render();
+    stats.update();
 }
 
 function render() {
