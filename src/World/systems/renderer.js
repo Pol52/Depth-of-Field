@@ -46,7 +46,7 @@ function createPostProcessing(width, height){
 
     postProcessing.bokeh_uniforms['tDepth'].value = postProcessing.rtTextureDepth.texture;
     postProcessing.bokeh_uniforms['tRender'].value = postProcessing.rtTextureColor.texture;  
-    postProcessing.bokeh_uniforms['iResolution'].value = new Vector2(width, height);
+    postProcessing.bokeh_uniforms['aspect'].value = new Vector2(width, height);
 
     postProcessing.materialBokeh = new ShaderMaterial( {
         uniforms: postProcessing.bokeh_uniforms,
@@ -69,7 +69,7 @@ function changeShader(postProcessing, useNew, width, height){
     
         postProcessing.bokeh_uniforms['tDepth'].value = postProcessing.rtTextureDepth.texture;
         postProcessing.bokeh_uniforms['tRender'].value = postProcessing.rtTextureColor.texture;  
-        postProcessing.bokeh_uniforms['iResolution'].value = new Vector2(width, height);
+        postProcessing.bokeh_uniforms['aspect'].value = new Vector2(width, height);
     
         postProcessing.materialBokeh = new ShaderMaterial( {
             uniforms: postProcessing.bokeh_uniforms,

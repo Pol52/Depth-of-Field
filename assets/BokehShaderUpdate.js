@@ -8,7 +8,7 @@ var BokehShaderUpdate = {
         tRender : { type: "t", texture: null },
         nearClip : { type: "f", value : 0.1 },
         farClip : { type: "f", value : 1000 },
-        iResolution : { type: "v2", value : new Vector2() },
+        aspect : { type: "v2", value : new Vector2() },
         focalDepth : { type: "f", value: 10000 },
         focalLength : { type: "f", value: 10.0 },
         fstop: { type: "f", value: 0.5 },
@@ -32,7 +32,7 @@ var BokehShaderUpdate = {
         "uniform sampler2D tRender;",
         "uniform float nearClip; ",
         "uniform float farClip;", 
-        "uniform vec2 iResolution;", 
+        "uniform vec2 aspect;", 
         "uniform float focalLength;", 
         "uniform float focalDepth;", 
         "uniform float fstop;", 
@@ -49,17 +49,9 @@ var BokehShaderUpdate = {
         "const int maxringsamples = rings * samples;",
         
         
-        "vec2 rand(vec2 coord) {",
-        
-            "float noiseX = ((fract(1.0-coord.s*(iResolution.x/2.0))*0.25)+(fract(coord.t*(iResolution.y/2.0))*0.75))*2.0-1.0;",
-            "float noiseY = ((fract(1.0-coord.s*(iResolution.x/2.0))*0.75)+(fract(coord.t*(iResolution.y/2.0))*0.25))*2.0-1.0;",
-        
-            "return vec2(noiseX,noiseY);",
-        "}",
-        
         "float bdepth(vec2 coords) {",
             "float d = 0.0, kernel[9];",
-            "vec2 texel = vec2(1.0/iResolution.x,1.0/iResolution.y);",
+            "vec2 texel = vec2(1.0/aspect.x,1.0/aspect.y);",
             "vec2 offset[9], wh = vec2(texel.x, texel.y) * dbsize;",
         
             "offset[0] = vec2(-wh.x,-wh.y);",
@@ -89,7 +81,7 @@ var BokehShaderUpdate = {
         
         "vec3 color(vec2 coords,float blur) {",
             "vec3 col = vec3(0.0);",
-            "vec2 texel = vec2(1.0/iResolution.x,1.0/iResolution.y);",
+            "vec2 texel = vec2(1.0/aspect.x,1.0/aspect.y);",
             
             "col.r = texture2D(tRender,coords + vec2(0.0,1.0)*texel*fringe*blur).r;",
             "col.g = texture2D(tRender,coords + vec2(-0.866,-0.5)*texel*fringe*blur).g;",
@@ -124,10 +116,8 @@ var BokehShaderUpdate = {
         
             "float blur = clamp(abs(a-b)*c,0.0,1.0);",
         
-            "vec2 noise = rand(vUv.xy)*dithering*blur;",
-        
-            "float w = (1.0/iResolution.x)*blur*maxblur+noise.x;",
-            "float h = (1.0/iResolution.y)*blur*maxblur+noise.y;",
+            "float w = (1.0/aspect.x)*blur*maxblur;",
+            "float h = (1.0/aspect.y)*blur*maxblur;",
         
             "vec3 col = texture2D(tRender, vUv.xy).rgb;",
         
