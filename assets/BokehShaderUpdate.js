@@ -43,9 +43,7 @@ var BokehShaderUpdate = {
         "float dbsize = 1.25;", 
         "const float CoC = 0.03;", 
         "const int rings = 3;",
-        "const int samples = 4;",
-        "const int maxringsamples = rings * samples;",
-        
+        "const int samples = 4;",        
         
         "float bdepth(vec2 coords) {",
             "float d = 0.0, kernel[9];",
