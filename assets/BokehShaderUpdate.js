@@ -12,7 +12,6 @@ var BokehShaderUpdate = {
         focalDepth : { type: "f", value: 10000 },
         focalLength : { type: "f", value: 10.0 },
         fstop: { type: "f", value: 0.5 },
-        dithering : { type: "f", value: 0.0001 },
         maxblur : { type: "f", value: 2.0 },
         fringe : { type: "f", value: 0 },
     },
@@ -36,7 +35,6 @@ var BokehShaderUpdate = {
         "uniform float focalLength;", 
         "uniform float focalDepth;", 
         "uniform float fstop;", 
-        "uniform float dithering;", 
         "uniform float maxblur;", 
         "uniform float fringe;", 
         

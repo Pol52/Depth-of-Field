@@ -118,7 +118,6 @@ class World {
         newShaderFolder = gui.addFolder('New Shader Settings');  
         newShaderFolder.add(effectController, "focalDepth", 1, 50.0, 1).listen().onChange(matChanger);      
         newShaderFolder.add(effectController, "fstop", 0.1, 22, 0.05).onChange(matChanger);
-        newShaderFolder.add(effectController, "dithering", 0.0001, 0.005, 0.0001).onChange(matChanger);
         newShaderFolder.add(effectController, "maxblur", 0.0, 5.0, 0.025).listen().onChange(matChanger);
         newShaderFolder.add(effectController, "fringe", 0, 10, 0.5).onChange(matChanger);
         newShaderFolder.open();
